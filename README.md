@@ -6,7 +6,10 @@ A tool for calculating how much money you've saved with their free game promotio
 2. Open your browser's Developer Tools (<kbd>F12</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>)
 3. Paste the below code in your console:
 ```javascript
-var currency="";const fetchGamesList=async(e="",t=[])=>{let a=await (await fetch(`https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory?sortDir=DESC&sortBy=DATE&nextPageToken=${e}&locale=${navigator.language}`)).json(),o=a.orders.reduce((e,t)=>[...e,...t.items.filter(e=>t.promotions&&t.promotions.some(t=>t.amount===e.price)).map(e=>[e.description,t.promotions[0].amount/100])],[]);console.log(`Orders: ${a.orders.length}, Games: ${o.length}, Next Token: ${a.nextPageToken}`);let r=[...t,...o];return(""===currency&&(currency=a.orders[0].items[0].amount.replace(/[\d\., ]/g,"")),a.nextPageToken)?await fetchGamesList(a.nextPageToken,r):r};var savedAmount=0;const games=await fetchGamesList();games.forEach(e=>{savedAmount+=e[1]}),console.log(`Total free games: ${games.length}, Saved amount: ${savedAmount.toFixed(2)+currency}`);
+var savedAmount=0;var games=0;const fetchGames=async(pageToken='')=>{const data=await(await fetch(`https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory?sortDir=DESC&sortBy=DATE&nextPageToken=${pageToken}&locale=${navigator.language}`)).json();for(let i=0;i<data.orders.length;i++){order=data.orders[i];if(order.promotions.length==0)continue;savedAmount+=order.promotions[0].amount;games+=1}
+if(!data.nextPageToken){console.log(`Total free games: ${games}\nSaved amount: ${(savedAmount/100).toFixed(2)+data.orders[0].items[0].amount.replace(/[\d\., ]/g, '')}`);return}
+return await fetchGames(data.nextPageToken)}
+console.log("Fetching all claimed free games. Please wait...");await fetchGames()
 ```
 
 Your total saved amount will appear on the console, alongside of your total claimed free games.

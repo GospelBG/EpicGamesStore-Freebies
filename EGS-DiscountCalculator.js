@@ -6,28 +6,25 @@
 * In case you get a warning error which prevents you from copy-pasting code, type "allow pasting" and try again.
 **********************************************************************************************************************/
 
-var currency = '';
-const fetchGamesList = async (pageToken = '', existingList = []) => {
-
-    const data = await (await fetch(`https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory?sortDir=DESC&sortBy=DATE&nextPageToken=${pageToken}&locale=${navigator.language}`)).json();
-    const gamesList = data.orders.reduce((acc, value) => [
-        ...acc, 
-        ...value.items
-            .filter(v => value.promotions && value.promotions.some(promo => promo.amount === v.price))
-            .map(v => [v.description, value.promotions[0].amount/100])
-    ], []);
-    console.log(`Orders: ${data.orders.length}, Games: ${gamesList.length}, Next Token: ${data.nextPageToken}`);
-    const newList = [...existingList, ...gamesList];
-
-    if (currency === '') currency = data.orders[0].items[0].amount.replace(/[\d\., ]/g, '');
-
-    if (!data.nextPageToken) return newList;
-    return await fetchGamesList(data.nextPageToken, newList);
-}
 var savedAmount = 0;
-const games = await fetchGamesList();
+var games = 0;
 
-games.forEach(game => {
-    savedAmount += game[1];
-});
-console.log(`Total free games: ${games.length}, Saved amount: ${savedAmount.toFixed(2)+currency}`);
+const fetchGames = async (pageToken = '') => {
+    const data = await (await fetch(`https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory?sortDir=DESC&sortBy=DATE&nextPageToken=${pageToken}&locale=${navigator.language}`)).json();
+
+    for (let i = 0; i < data.orders.length; i++) {
+        order = data.orders[i];
+        if (order.promotions.length == 0) continue;
+        savedAmount += order.promotions[0].amount;
+        games += 1;
+    }
+
+    if (!data.nextPageToken) {
+        console.log(`Total free games: ${games}\nSaved amount: ${(savedAmount/100).toFixed(2)+data.orders[0].items[0].amount.replace(/[\d\., ]/g, '')}`); // To get currency symbol, get any transaction price string and get the symbol
+        return
+    }
+    return await fetchGames(data.nextPageToken);
+}
+
+console.log("Fetching all claimed free games. Please wait...");
+await fetchGames();
